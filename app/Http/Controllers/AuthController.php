@@ -44,13 +44,15 @@ class AuthController extends Controller
         // =========================
         // 1️⃣ TRY LIVE DATABASE
         // =========================
+        session(['app_mode' => 'live']);
+
         Config::set('database.default', 'mysql');
         DB::purge('mysql');
-        config(['auth.providers.users.model' => \App\Models\User::class]);
-        (new \App\Models\User)->setConnection('mysql');
+        DB::reconnect('mysql'); // 🔥 IMPORTANT
+
         if (Auth::attempt([$field => $login, 'password' => $password], $remember)) {
+            dd(DB::connection()->getDatabaseName());
             RateLimiter::clear($throttleKey);
-            session(['app_mode' => 'live']);
             $request->session()->regenerate();
             return redirect()->intended(route('dashboard'));
         }
@@ -58,14 +60,16 @@ class AuthController extends Controller
         // =========================
         // 2️⃣ TRY DEMO DATABASE
         // =========================
+        session(['app_mode' => 'demo']);
+
         Config::set('database.default', 'demo');
+        DB::purge('mysql');   // 🔥 clear old connection too
         DB::purge('demo');
-        config(['auth.providers.users.model' => \App\Models\User::class]);
-        (new \App\Models\User)->setConnection('demo');
+        DB::reconnect('demo'); // 🔥 IMPORTANT
 
         if (Auth::attempt([$field => $login, 'password' => $password], $remember)) {
+            dd(DB::connection()->getDatabaseName());
             RateLimiter::clear($throttleKey);
-            session(['app_mode' => 'demo']);
             $request->session()->regenerate();
             return redirect()->intended(route('dashboard'));
         }
