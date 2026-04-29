@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\Config;
 
 class AuthController extends Controller
 {
+        public function showLogin()
+    {
+        return view('auth.login');
+    }
+    
     public function login(Request $request)
     {
         $request->validate([
