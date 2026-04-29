@@ -51,7 +51,6 @@ class AuthController extends Controller
         DB::reconnect('mysql'); // 🔥 IMPORTANT
 
         if (Auth::attempt([$field => $login, 'password' => $password], $remember)) {
-            dd(DB::connection()->getDatabaseName());
             RateLimiter::clear($throttleKey);
             $request->session()->regenerate();
             return redirect()->intended(route('dashboard'));
@@ -68,7 +67,6 @@ class AuthController extends Controller
         DB::reconnect('demo'); // 🔥 IMPORTANT
 
         if (Auth::attempt([$field => $login, 'password' => $password], $remember)) {
-            dd(DB::connection()->getDatabaseName());
             RateLimiter::clear($throttleKey);
             $request->session()->regenerate();
             return redirect()->intended(route('dashboard'));
