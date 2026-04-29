@@ -21,17 +21,22 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-    $mode = session('app_mode', 'live');
+            if (app()->runningInConsole()) {
+        return; // avoid issues in artisan commands
+    }
+
+    $mode = request()->session()->get('app_mode', 'live');
 
     if ($mode === 'demo') {
         Config::set('database.default', 'demo');
         DB::purge('mysql');
         DB::purge('demo');
-        DB::reconnect('demo'); // 🔥
+        DB::reconnect('demo');
     } else {
         Config::set('database.default', 'mysql');
         DB::purge('mysql');
-        DB::reconnect('mysql'); // 🔥
+        DB::reconnect('mysql');
     }
+
     }
 }
