@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Config;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +20,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        $mode = session('app_mode', 'live');
+
+        if ($mode === 'demo') {
+            Config::set('database.default', 'demo');
+        } else {
+            Config::set('database.default', 'mysql');
+        }
     }
 }

@@ -6,14 +6,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Config;
 
 class AuthController extends Controller
 {
-    public function showLogin()
-    {
-        return view('auth.login');
-    }
-
     public function login(Request $request)
     {
         $request->validate([
@@ -32,25 +28,53 @@ class AuthController extends Controller
 
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             $seconds = RateLimiter::availableIn($throttleKey);
-            return back()->withErrors(['login' => "Too many login attempts. Try again in {$seconds} seconds."])->onlyInput('login');
+            return back()->withErrors([
+                'login' => "Too many login attempts. Try again in {$seconds} seconds."
+            ])->onlyInput('login');
         }
 
         $field = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
+        // =========================
+        // 1️⃣ TRY LIVE DATABASE
+        // =========================
+        Config::set('database.default', 'mysql');
+
         if (Auth::attempt([$field => $login, 'password' => $password], $remember)) {
             RateLimiter::clear($throttleKey);
+            session(['app_mode' => 'live']);
             $request->session()->regenerate();
             return redirect()->intended(route('dashboard'));
         }
 
+        // =========================
+        // 2️⃣ TRY DEMO DATABASE
+        // =========================
+        Config::set('database.default', 'demo');
+
+        if (Auth::attempt([$field => $login, 'password' => $password], $remember)) {
+            RateLimiter::clear($throttleKey);
+            session(['app_mode' => 'demo']);
+            $request->session()->regenerate();
+            return redirect()->intended(route('dashboard'));
+        }
+
+        // =========================
+        // 3️⃣ FAILED LOGIN
+        // =========================
         RateLimiter::hit($throttleKey, 60);
 
-        return back()->withErrors(['login' => 'These credentials do not match our records.'])->onlyInput('login');
+        Config::set('database.default', 'mysql');
+
+        return back()->withErrors([
+            'login' => 'These credentials do not match our records.'
+        ])->onlyInput('login');
     }
 
     public function logout(Request $request)
     {
         Auth::logout();
+        session()->forget('app_mode');
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return redirect('/');

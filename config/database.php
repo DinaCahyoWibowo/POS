@@ -34,6 +34,16 @@ return [
     */
 
     'connections' => [
+        'demo' => [
+            'driver' => 'mysql',
+            'host' => env('DB_HOST'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => env('DB_DEMO_DATABASE'),
+            'username' => env('DB_DEMO_USERNAME'),
+            'password' => env('DB_DEMO_PASSWORD'),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+        ],
 
         'sqlite' => [
             'driver' => 'sqlite',
