@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Config;
 
 class AuthController extends Controller
@@ -14,7 +15,7 @@ class AuthController extends Controller
     {
         return view('auth.login');
     }
-    
+
     public function login(Request $request)
     {
         $request->validate([
@@ -44,7 +45,9 @@ class AuthController extends Controller
         // 1️⃣ TRY LIVE DATABASE
         // =========================
         Config::set('database.default', 'mysql');
-
+        DB::purge('mysql');
+        config(['auth.providers.users.model' => \App\Models\User::class]);
+        (new \App\Models\User)->setConnection('mysql');
         if (Auth::attempt([$field => $login, 'password' => $password], $remember)) {
             RateLimiter::clear($throttleKey);
             session(['app_mode' => 'live']);
@@ -56,6 +59,9 @@ class AuthController extends Controller
         // 2️⃣ TRY DEMO DATABASE
         // =========================
         Config::set('database.default', 'demo');
+        DB::purge('demo');
+        config(['auth.providers.users.model' => \App\Models\User::class]);
+        (new \App\Models\User)->setConnection('demo');
 
         if (Auth::attempt([$field => $login, 'password' => $password], $remember)) {
             RateLimiter::clear($throttleKey);
