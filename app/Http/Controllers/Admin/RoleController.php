@@ -42,11 +42,20 @@ class RoleController extends Controller
 
     public function create()
     {
+        // Prevent creating roles in demo mode
+        if (session('app_mode') === 'demo') {
+            return redirect()->route('admin.roles.index')->with('error', 'Creating new roles is disabled in demo mode.');
+        }
+
         return view('admin.roles.create');
     }
 
     public function store(Request $request)
     {
+        if (session('app_mode') === 'demo') {
+            return redirect()->route('admin.roles.index')->with('error', 'Creating new roles is disabled in demo mode.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:100|alpha_dash|unique:roles,slug',

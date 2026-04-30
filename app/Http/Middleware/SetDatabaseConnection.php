@@ -10,7 +10,18 @@ class SetDatabaseConnection
 {
     public function handle($request, Closure $next)
     {
-        $mode = session('app_mode', 'live');
+        // Priority: query param -> cookie -> session -> default
+        $queryMode = request()->query('app_mode');
+        $cookieMode = request()->cookie('app_mode');
+        if ($queryMode) {
+            $mode = $queryMode;
+        } else {
+            if ($cookieMode) {
+                $mode = $cookieMode;
+            } else {
+                $mode = session('app_mode', 'live');
+            }
+        }
 
         if ($mode === 'demo') {
             Config::set('database.default', 'demo');

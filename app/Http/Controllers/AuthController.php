@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cookie;
 
 class AuthController extends Controller
 {
@@ -41,35 +43,79 @@ class AuthController extends Controller
 
         $field = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
-        // =========================
-        // 1️⃣ TRY LIVE DATABASE
-        // =========================
-        session(['app_mode' => 'live']);
+        // Allow forcing which database to try first (e.g. demo buttons)
+        $forceMode = $request->input('force_mode'); // expected 'demo' or 'live'
 
-        Config::set('database.default', 'mysql');
-        DB::purge('mysql');
-        DB::reconnect('mysql'); // 🔥 IMPORTANT
-
-        if (Auth::attempt([$field => $login, 'password' => $password], $remember)) {
-            RateLimiter::clear($throttleKey);
-            $request->session()->regenerate();
-            return redirect()->intended(route('dashboard'));
+        $tryOrder = [];
+        if ($forceMode === 'demo') {
+            $tryOrder = ['demo', 'mysql'];
+        } elseif ($forceMode === 'live') {
+            $tryOrder = ['mysql', 'demo'];
+        } else {
+            // default behavior: try live then demo
+            $tryOrder = ['mysql', 'demo'];
         }
 
-        // =========================
-        // 2️⃣ TRY DEMO DATABASE
-        // =========================
-        session(['app_mode' => 'demo']);
+        // Explicitly check users on each connection to avoid accidental cross-authentication
+        foreach ($tryOrder as $db) {
+            // query the users table on the specific connection
+            try {
+                $row = DB::connection($db)->table('users')->where($field, $login)->first();
+            } catch (\Exception $e) {
+                $row = null;
+            }
 
-        Config::set('database.default', 'demo');
-        DB::purge('mysql');   // 🔥 clear old connection too
-        DB::purge('demo');
-        DB::reconnect('demo'); // 🔥 IMPORTANT
+            if (!$row) {
+                continue;
+            }
 
-        if (Auth::attempt([$field => $login, 'password' => $password], $remember)) {
-            RateLimiter::clear($throttleKey);
-            $request->session()->regenerate();
-            return redirect()->intended(route('dashboard'));
+            // verify password hash from that connection
+            if (!Hash::check($password, $row->password)) {
+                continue;
+            }
+
+            // Switch default connection to the one we authenticated against
+            if ($db === 'mysql') {
+                session(['app_mode' => 'live']);
+                Config::set('database.default', 'mysql');
+                DB::purge('mysql');
+                DB::reconnect('mysql');
+            } else {
+                session(['app_mode' => 'demo']);
+                Config::set('database.default', 'demo');
+                DB::purge('mysql'); // clear any leftover mysql connection
+                DB::purge('demo');
+                DB::reconnect('demo');
+            }
+
+            // Load the Eloquent user via the (now) default connection and log in
+            $userModel = \App\Models\User::find($row->id);
+            if ($userModel) {
+                Auth::login($userModel, $remember);
+                // ensure the app_mode is persisted and session is saved before redirect
+                $mode = $db === 'mysql' ? 'live' : 'demo';
+                $request->session()->put('app_mode', $mode);
+                // also set a cookie so concurrent requests will carry the intended mode
+                Cookie::queue(Cookie::make('app_mode', $mode, 60));
+                RateLimiter::clear($throttleKey);
+                $request->session()->regenerate();
+                $request->session()->save();
+                // redirect to the intended URL (rely on session+cookie for app_mode)
+                $intended = session()->pull('url.intended', route('dashboard'));
+                return redirect()->to($intended);
+            }
+            // If we couldn't load via Eloquent (unexpected), fall back to attempt with Auth facade
+            if (Auth::attempt([$field => $login, 'password' => $password], $remember)) {
+                // fallback path: ensure app_mode persisted
+                $mode = $db === 'mysql' ? 'live' : 'demo';
+                $request->session()->put('app_mode', $mode);
+                Cookie::queue(Cookie::make('app_mode', $mode, 60));
+                RateLimiter::clear($throttleKey);
+                $request->session()->regenerate();
+                $request->session()->save();
+                $intended = session()->pull('url.intended', route('dashboard'));
+                return redirect()->to($intended);
+            }
         }
 
         // =========================

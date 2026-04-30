@@ -8,13 +8,18 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 <body>
+@php $cur = $currentUser ?? auth()->user(); @endphp
 <!-- Temporary debug UI removed -->
 <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
     <div class="container-fluid">
         <a class="navbar-brand" href="{{ auth()->check() ? route('dashboard') : route('login') }}">
             UD Kasemi
             @auth
-                <small class="text-muted ms-2">({{ auth()->user()->name }})</small>
+                @php
+                    $appMode = request()->query('app_mode') ?: request()->cookie('app_mode') ?: session('app_mode', 'live');
+                @endphp
+                <small class="text-muted ms-2">({{ $cur->name ?? auth()->user()->name }})</small>
+                <span class="badge ms-2 {{ $appMode === 'demo' ? 'bg-warning text-dark' : 'bg-success' }}">{{ $appMode === 'demo' ? 'Demo' : 'Live' }}</span>
             @endauth
         </a>
         <div class="collapse navbar-collapse">
@@ -22,7 +27,7 @@
                 @auth
                     <li class="nav-item"><a class="nav-link" href="{{ route('dashboard') }}">Dashboard</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ route('profile') }}">Profile</a></li>
-                    @if(auth()->user() && auth()->user()->isAdmin())
+                    @if($cur && $cur->isAdmin())
                         <li class="nav-item"><a class="nav-link" href="{{ route('admin.users.index') }}">Users</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ route('admin.roles.index') }}">Roles</a></li>
                     @endif
@@ -44,7 +49,7 @@
         @unless($isPos)
         <nav id="sidebar" class="col-md-2 col-lg-2 d-md-block bg-light sidebar collapse show">
             <div class="position-sticky pt-3">
-                @if(auth()->user() && in_array(auth()->user()->role, ['admin','inventory']))
+                @if($cur && in_array($cur->role, ['admin','inventory']))
                 <h6 class="px-3">Inventory</h6>
                 <div class="list-group list-group-flush">
                     @php
@@ -55,15 +60,15 @@
                     </a>
                     <div class="collapse {{ $inventoryActive ? 'show' : '' }}" id="inventoryMenu">
                         <div class="list-group">
-                            @if(auth()->user()?->role === 'admin')
+                            @if(($cur?->role ?? null) === 'admin')
                                 <a class="list-group-item list-group-item-action ps-4 {{ request()->routeIs('admin.items.create') ? 'active' : '' }}" href="{{ route('admin.items.create') }}">New Item</a>
                             @endif
                             <a class="list-group-item list-group-item-action ps-4 {{ request()->routeIs('admin.items.index') ? 'active' : '' }}" href="{{ route('admin.items.index') }}">Item List</a>
-                            @if(auth()->user()?->role === 'admin')
+                            @if(($cur?->role ?? null) === 'admin')
                                 <a class="list-group-item list-group-item-action ps-4 {{ request()->routeIs('admin.brands.create') ? 'active' : '' }}" href="{{ route('admin.brands.create') }}">New Brand</a>
                             @endif
                             <a class="list-group-item list-group-item-action ps-4 {{ request()->routeIs('admin.brands.index') ? 'active' : '' }}" href="{{ route('admin.brands.index') }}">Brand List</a>
-                            @if(auth()->user()?->role === 'admin')
+                            @if(($cur?->role ?? null) === 'admin')
                                 <a class="list-group-item list-group-item-action ps-4 {{ request()->routeIs('admin.categories.create') ? 'active' : '' }}" href="{{ route('admin.categories.create') }}">New Category</a>
                             @endif
                             <a class="list-group-item list-group-item-action ps-4 {{ request()->routeIs('admin.categories.index') ? 'active' : '' }}" href="{{ route('admin.categories.index') }}">Category List</a>
@@ -79,7 +84,7 @@
                     </div>
                 @endif
                 
-                @if(auth()->user() && in_array(auth()->user()->role, ['admin','sales']))
+                @if($cur && in_array($cur->role, ['admin','sales']))
                 <h6 class="px-3 mt-3">Sales</h6>
                 <div class="list-group list-group-flush">
                     @php

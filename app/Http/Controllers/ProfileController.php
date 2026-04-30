@@ -4,17 +4,34 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class ProfileController extends Controller
 {
     public function show()
     {
-        return view('profile');
+        $mode = request()->query('app_mode') ?: request()->cookie('app_mode') ?: session('app_mode', 'live');
+
+        try {
+            $conn = $mode === 'demo' ? 'demo' : 'mysql';
+            $user = \App\Models\User::on($conn)->find(Auth::id());
+        } catch (\Exception $e) {
+            $user = Auth::user();
+        }
+
+        return view('profile', ['user' => $user]);
     }
 
     public function update(Request $request)
     {
-        $user = $request->user();
+        // load the user from the correct connection similarly to show()
+        $mode = request()->query('app_mode') ?: request()->cookie('app_mode') ?: session('app_mode', 'live');
+        $conn = $mode === 'demo' ? 'demo' : 'mysql';
+        try {
+            $user = \App\Models\User::on($conn)->find($request->user()->id);
+        } catch (\Exception $e) {
+            $user = $request->user();
+        }
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -32,7 +49,13 @@ class ProfileController extends Controller
 
     public function updatePassword(Request $request)
     {
-        $user = $request->user();
+        $mode = request()->query('app_mode') ?: request()->cookie('app_mode') ?: session('app_mode', 'live');
+        $conn = $mode === 'demo' ? 'demo' : 'mysql';
+        try {
+            $user = \App\Models\User::on($conn)->find($request->user()->id);
+        } catch (\Exception $e) {
+            $user = $request->user();
+        }
 
         $request->validate([
             'current_password' => 'required|string',

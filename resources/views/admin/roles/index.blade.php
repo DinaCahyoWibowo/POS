@@ -2,9 +2,14 @@
 
 @section('content')
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>Roles</h3>
-        <a href="{{ route('admin.roles.create') }}" class="btn btn-primary">Create Role</a>
+        @php $appMode = request()->query('app_mode') ?: request()->cookie('app_mode') ?: session('app_mode', 'live'); @endphp
+        @if($appMode === 'demo')
+            <a href="#" class="btn btn-primary" onclick="event.preventDefault(); alert('Creating new roles is disabled in demo mode.');" title="Creating roles is disabled in demo mode">Create Role</a>
+        @else
+            <a href="{{ route('admin.roles.create') }}" class="btn btn-primary">Create Role</a>
+        @endif
     </div>
 
     @if(session('success'))
