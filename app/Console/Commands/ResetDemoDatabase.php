@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 
 class ResetDemoDatabase extends Command
 {
@@ -14,14 +16,25 @@ class ResetDemoDatabase extends Command
     {
     $this->info('Resetting demo database...');
 
-    // Run migration fresh + seed on demo DB
-    Artisan::call('migrate:fresh', [
-        '--database' => 'demo',
-        '--seed' => true,
-        '--force' => true,
-    ]);
+    // Ensure application uses the demo connection for the migrate+seed steps
+    Config::set('database.default', 'demo');
+    DB::purge('demo');
+    DB::reconnect('demo');
 
-    $this->info(Artisan::output());
+    // Run migration fresh + seed on demo DB
+    try {
+        Artisan::call('migrate:fresh', [
+            '--database' => 'demo',
+            '--seed' => true,
+            '--force' => true,
+        ]);
+    } catch (\Exception $e) {
+        $this->error('Demo reset failed: '.$e->getMessage());
+        $this->error(Artisan::output());
+        return 1;
+    }
+
+    $this->info('Migrations & seeders executed successfully.');
 
     $this->info('Demo database reset successfully!');
     }
