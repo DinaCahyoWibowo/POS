@@ -6,7 +6,7 @@
         <h3>Roles</h3>
         @php $appMode = request()->query('app_mode') ?: request()->cookie('app_mode') ?: session('app_mode', 'live'); @endphp
         @if($appMode === 'demo')
-            <a href="#" class="btn btn-primary" onclick="event.preventDefault(); alert('Creating new roles is disabled in demo mode.');" title="Creating roles is disabled in demo mode">Create Role</a>
+            <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#demoModeModal" role="button" title="Creating roles is disabled in demo mode">Create Role</a>
         @else
             <a href="{{ route('admin.roles.create') }}" class="btn btn-primary">Create Role</a>
         @endif
@@ -109,6 +109,24 @@
         })();
     </script>
 
-    {{ $roles->links('pagination::bootstrap-5') }}
+        <!-- Demo mode warning modal -->
+        <div class="modal fade" id="demoModeModal" tabindex="-1" aria-labelledby="demoModeModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="demoModeModalLabel">Demo Mode</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Creating new roles is disabled in demo mode.
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{ $roles->links('pagination::bootstrap-5') }}
 </div>
 @endsection
