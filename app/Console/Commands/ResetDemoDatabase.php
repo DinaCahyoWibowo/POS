@@ -35,7 +35,7 @@ class ResetDemoDatabase extends Command
     }
 
     $this->info('Migrations & seeders executed successfully.');
-
+    Log::info('demo:reset SUCCESS at ' . now());
     $this->info('Demo database reset successfully!');
     }
 }
