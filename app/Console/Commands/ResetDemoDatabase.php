@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ResetDemoDatabase extends Command
 {
@@ -14,6 +15,7 @@ class ResetDemoDatabase extends Command
 
     public function handle()
     {
+    Log::info('demo:reset START at ' . now());
     $this->info('Resetting demo database...');
 
     // Ensure application uses the demo connection for the migrate+seed steps
